@@ -84,10 +84,13 @@ const checkAuth = (req, res, next) => {
 
 // Apply protection to specific routes
 app.get('/', checkAuth, (req, res) => {
+    // This header prevents the browser from caching the HTML page
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.get('/index.html', checkAuth, (req, res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
@@ -95,15 +98,17 @@ app.get('/index.html', checkAuth, (req, res) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- AUTHENTICATION ROUTE ---
+// --- AUTHENTICATION ROUTE ---
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
     
     // Static Credentials Check
     if (username === 'admin' && password === 'gymhubadmin') {
-        // Set a cookie that lasts 24 hours
+        // Set a cookie WITHOUT maxAge. 
+        // This makes it a Session Cookie: It dies when the browser closes.
         res.cookie('auth_token', 'gymhub_admin_secret', { 
-            maxAge: 24 * 60 * 60 * 1000, 
-            httpOnly: true 
+            httpOnly: true,
+            sameSite: 'strict' // Improves security
         });
         return res.json({ success: true });
     } else {

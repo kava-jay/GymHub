@@ -1136,11 +1136,21 @@
         }
 
         async function logout() {
-            if (confirm("Are you sure you want to logout?")) {
-                const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
+            // Clear frontend storage
+            sessionStorage.clear();
+            localStorage.clear();
+
+            // Call backend to clear the cookie
+            const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
+
+            try {
                 await fetch(`${API_URL}/logout`, { method: 'POST' });
-                window.location.href = '/login.html';
+            } catch (e) {
+                console.log("Logout request failed, redirecting anyway");
             }
+
+            // Force reload
+            window.location.href = '/login.html';
         }
     </script>
 </body>
