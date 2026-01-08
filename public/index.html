@@ -580,6 +580,8 @@
         <h2 style="color:var(--primary); margin-bottom:30px; font-size:1.5rem; font-weight:800;">GymHub</h2>
         <a class="nav-link active" onclick="switchView('dashboard')">Dashboard</a>
         <a class="nav-link" onclick="switchView('members')">Members</a>
+        <!-- Inside the sidebar, below the other links -->
+        <a class="nav-link" onclick="logout()" style="color: var(--danger); margin-top: 20px;">Logout</a>
     </nav>
 
     <!-- Main Content -->
@@ -1131,6 +1133,14 @@
 
             mSelect.addEventListener('change', fetchDashboardStats);
             ySelect.addEventListener('change', fetchDashboardStats);
+        }
+
+        async function logout() {
+            if (confirm("Are you sure you want to logout?")) {
+                const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
+                await fetch(`${API_URL}/logout`, { method: 'POST' });
+                window.location.href = '/login.html';
+            }
         }
     </script>
 </body>

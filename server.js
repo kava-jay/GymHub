@@ -1,9 +1,12 @@
+require('dotenv').config();
+const cookieParser = require('cookie-parser');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 
 const app = express();
+app.use(cookieParser()); // Add this line
 const PORT = 5000;
 
 // Middleware
@@ -61,6 +64,58 @@ const deletedLogSchema = new mongoose.Schema({
 });
 
 const DeletedLog = mongoose.model('DeletedLog', deletedLogSchema);
+
+// --- MIDDLEWARE TO PROTECT DASHBOARD ---
+const checkAuth = (req, res, next) => {
+    // Allow login page to be accessed without auth
+    if (req.path === '/login.html' || req.path === '/api/login') {
+        return next();
+    }
+
+    const token = req.cookies.auth_token;
+
+    if (token === 'gymhub_admin_secret') {
+        next(); // User is logged in, continue
+    } else {
+        // User is not logged in, redirect to login
+        res.redirect('/login.html');
+    }
+};
+
+// Apply protection to specific routes
+app.get('/', checkAuth, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/index.html', checkAuth, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Static files (CSS, JS, etc) remain public, but HTML is protected above
+app.use(express.static(path.join(__dirname, 'public')));
+
+// --- AUTHENTICATION ROUTE ---
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    
+    // Static Credentials Check
+    if (username === 'admin' && password === 'gymhubadmin') {
+        // Set a cookie that lasts 24 hours
+        res.cookie('auth_token', 'gymhub_admin_secret', { 
+            maxAge: 24 * 60 * 60 * 1000, 
+            httpOnly: true 
+        });
+        return res.json({ success: true });
+    } else {
+        return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+});
+
+// Logout Route
+app.post('/api/logout', (req, res) => {
+    res.clearCookie('auth_token');
+    res.json({ success: true });
+});
 
 // --- API ROUTES ---
 
