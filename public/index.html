@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GymHub | Admin Dashboard</title>
+    <style>
+        /* --- CSS VARIABLES --- */
+        :root {
+            --primary: #E11D48;
+            --primary-hover: #BE123C;
+            --bg-dark: #0F172A;
+            --bg-card: #1E293B;
+            --text-main: #F8FAFC;
+            --text-muted: #94A3B8;
+            --border: #334155;
+            --success: #10B981;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --radius: 12px;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* --- LAYOUT --- */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            padding: 20px;
+            position: fixed;
+            height: 100%;
+            left: 0;
+            top: 0;
+            z-index: 5;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            padding: 30px;
+            width: calc(100% - 260px);
+        }
+
+        .nav-link {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            color: var(--text-muted);
+            text-decoration: none;
+            margin-bottom: 8px;
+            cursor: pointer;
+            border-radius: var(--radius);
+            transition: all 0.2s;
+            font-weight: 500;
+            align-items: center;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .view-section {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- DASHBOARD & TABLE STYLES --- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .controls-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background-color: var(--bg-card);
+            padding: 24px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.2;
+        }
+
+        /* Dashboard Icons */
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .icon-blue { background-color: rgba(59, 130, 246, 0.15); color: #3B82F6; }
+        .icon-red { background-color: rgba(239, 68, 68, 0.15); color: var(--danger); }
+        .icon-green { background-color: rgba(16, 185, 129, 0.15); color: var(--success); }
+        .icon-purple { background-color: rgba(168, 85, 247, 0.15); color: #A855F7; }
+        .icon-orange { background-color: rgba(245, 158, 11, 0.15); color: var(--warning); }
+
+        .table-container {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .table-actions {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.02);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        /* --- BUTTONS & INPUTS --- */
+        .btn {
+            padding: 10px 20px; /* Slightly taller */
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+
+        .btn-sm { padding: 6px 12px; font-size: 0.85rem; }
+
+        .search-input, .filter-select {
+            padding: 10px 12px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: white;
+            border-radius: 8px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .search-input:focus { border-color: var(--primary); }
+
+        /* --- MODALS (PROFESSIONAL & SPACIOUS) --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 20px;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            width: 100%;
+            max-width: 650px; /* Wider for better spacing */
+            border: 1px solid var(--border);
+            
+            /* Scrollable Fix */
+            max-height: 90vh; 
+            overflow-y: auto; 
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0;
+            padding: 24px 30px 0; /* More side padding */
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 2rem;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0 10px;
+            transition: color 0.2s;
+        }
+        .btn-close:hover { color: var(--danger); }
+
+        .modal-body {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 30px; /* More breathing room inside */
+        }
+
+        /* --- FORM STYLING (SPACIOUS & CLEAN) --- */
+        
+        /* Section Headers to group fields visually */
+        .form-section {
+            margin-bottom: 35px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .form-section-title {
+            color: var(--primary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .form-section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px; /* Increased gap */
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px; /* Space between label and input */
+        }
+
+        .form-group label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px; /* Larger padding for touch */
+            background: #1A2335; /* Slightly lighter than dark bg for contrast */
+            border: 1px solid var(--border);
+            color: white;
+            border-radius: 8px;
+            outline: none;
+            font-size: 1rem;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .form-input:focus, .form-select:focus {
+            border-color: var(--primary);
+            background: #1E293B;
+            box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.1);
+        }
+
+        /* Photo Upload */
+        .file-upload-wrapper {
+            position: relative;
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+            background: rgba(255,255,255,0.02);
+            margin-bottom: 10px;
+        }
+
+        .file-upload-wrapper:hover { border-color: var(--primary); background: rgba(225,29,72,0.05); }
+        .file-upload-input { position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; cursor: pointer; }
+        
+        .preview-img {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-top: 15px;
+            display: none;
+            border: 3px solid var(--primary);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--border);
+        }
+
+        .avatar-cell { display: flex; align-items: center; gap: 12px; }
+
+        /* Status Badges */
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .status-active { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .status-expired { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        .status-warning { background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .status-critical { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { width: 70px; padding: 15px 10px; }
+            .logo span, .nav-link span { display: none; }
+            .nav-link { justify-content: center; }
+            .main-content { margin-left: 70px; width: calc(100% - 70px); }
+            .controls-container { width: 100%; flex-direction: column; }
+            .search-input, .filter-select { width: 100%; }
+            .form-row { grid-template-columns: 1fr; }
+            .modal { max-width: 100%; border-radius: 0; border: none; }
+            .modal-body { padding: 20px; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <h2 style="color:var(--primary); margin-bottom:30px; font-size:1.5rem; font-weight:800;">GymHub</h2>
+        <a class="nav-link active" onclick="switchView('dashboard')">Dashboard</a>
+        <a class="nav-link" onclick="switchView('members')">Members</a>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- DASHBOARD SECTION -->
+        <section id="view-dashboard" class="view-section active">
+            <div class="header">
+                <div class="page-title">
+                    <h1 style="font-size: 1.8rem; font-weight: 700; margin-bottom: 5px;">Dashboard Overview</h1>
+                    <p style="color: var(--text-muted);">Monitor performance and member status.</p>
+                </div>
+                <div class="controls-container">
+                    <select id="dashMonth" class="filter-select"></select>
+                    <select id="dashYear" class="filter-select"></select>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <!-- New Members -->
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-label">New Members</div>
+                            <div class="stat-value" id="statNewMembers">0</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">Selected Period</div>
+                        </div>
+                        <div class="stat-icon icon-blue">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                        </div>
+                    </div>
+                </div>
+                <!-- Members Left -->
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-label">Members Left</div>
+                            <div class="stat-value" id="statLeftMembers" style="color: var(--danger);">0</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">Selected Period</div>
+                        </div>
+                        <div class="stat-icon icon-red">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        </div>
+                    </div>
+                </div>
+                <!-- Revenue -->
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-label">Revenue</div>
+                            <div class="stat-value" id="statRevenue">₹0</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">Selected Period</div>
+                        </div>
+                        <div class="stat-icon icon-green">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                        </div>
+                    </div>
+                </div>
+                <!-- Total Active -->
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-label">Total Active</div>
+                            <div class="stat-value" id="statActive" style="color: var(--success);">0</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">Current Roster</div>
+                        </div>
+                        <div class="stat-icon icon-purple">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        </div>
+                    </div>
+                </div>
+                <!-- Total Expired -->
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-label">Total Expired</div>
+                            <div class="stat-value" id="statExpired" style="color: var(--warning);">0</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">Plan Finished</div>
+                        </div>
+                        <div class="stat-icon icon-orange">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MEMBERS SECTION -->
+        <section id="view-members" class="view-section">
+            <div class="table-actions">
+                <h3>Members List</h3>
+                <div class="controls-container">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search name..." style="width: 250px;">
+                    <select id="statusFilter" class="filter-select">
+                        <option value="all">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="expired">Expired</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" onclick="openModal()">+ Add Member</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th>Stats</th>
+                            <th>Plan</th>
+                            <th>Joined</th>
+                            <th>Expires</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="membersTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Add/Edit Member Modal (PROFESSIONAL UI & SPACING) -->
+    <div class="modal-overlay" id="memberModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Add Member</h2>
+                <button class="btn-close" onclick="closeModal()">&times;</button>
+            </div>
+            
+            <form id="memberForm">
+                <div class="modal-body">
+                    <input type="hidden" id="memberId">
+
+                    <!-- Section 1: Profile Photo -->
+                    <div class="form-section">
+                        <div class="form-section-title">Photo Profile</div>
+                        <div class="file-upload-wrapper">
+                            <span id="uploadText" style="color:var(--text-muted); font-size:0.9rem;">Click to upload photo</span>
+                            <input type="file" id="memberPhoto" class="file-upload-input" accept="image/*">
+                            <img id="previewImg" class="preview-img" src="" alt="Preview">
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Personal Information -->
+                    <div class="form-section">
+                        <div class="form-section-title">Personal Information</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="memberName">Full Name</label>
+                                <input type="text" id="memberName" class="form-input" required placeholder="e.g. John Doe">
+                            </div>
+                            <div class="form-group">
+                                <label for="memberMobile">Mobile Number</label>
+                                <input type="tel" id="memberMobile" class="form-input" required placeholder="e.g. 9876543210">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="memberAge">Age</label>
+                                <input type="number" id="memberAge" class="form-input" required placeholder="e.g. 25">
+                            </div>
+                            <div class="form-group">
+                                <label for="memberWeight">Weight (kg)</label>
+                                <input type="number" id="memberWeight" class="form-input" required placeholder="e.g. 75">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="memberAddress">Address</label>
+                            <input type="text" id="memberAddress" class="form-input" required placeholder="Full Street Address">
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Membership Details -->
+                    <div class="form-section" style="margin-bottom: 0; border-bottom: none;">
+                        <div class="form-section-title">Membership Plan</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="memberAmount">Amount Paid (₹)</label>
+                                <input type="number" id="memberAmount" class="form-input" required placeholder="0.00" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label for="memberJoinedDate">Joining Date</label>
+                                <input type="date" id="memberJoinedDate" class="form-input" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="memberDuration">Membership Duration</label>
+                            <select id="memberDuration" class="form-select">
+                                <option value="1">1 Month</option>
+                                <option value="3">3 Months</option>
+                                <option value="6">6 Months</option>
+                                <option value="12">12 Months</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div style="margin-top: 30px; display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid var(--border); padding-top: 20px; flex-shrink: 0;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Member</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Membership History</h2>
+                <button class="btn-close" onclick="closeHistoryModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="historyList" style="padding: 0 10px;">
+                <!-- History injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        let members = [];
+        let currentPhotoBase64 = "";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initDropdowns();
+            fetchMembers();
+            fetchDashboardStats();
+            document.getElementById('memberJoinedDate').value = new Date().toISOString().split('T')[0];
+        });
+
+        /* --- PHOTO --- */
+        const photoInput = document.getElementById('memberPhoto');
+        const previewImg = document.getElementById('previewImg');
+        const uploadText = document.getElementById('uploadText');
+
+        photoInput.addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onloadend = function () {
+                    currentPhotoBase64 = reader.result;
+                    previewImg.src = currentPhotoBase64;
+                    previewImg.style.display = 'block';
+                    uploadText.textContent = file.name;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function resetImageState() {
+            currentPhotoBase64 = "";
+            previewImg.src = "";
+            previewImg.style.display = 'none';
+            uploadText.textContent = "Click to upload photo";
+            photoInput.value = "";
+        }
+
+        /* --- DATA FETCHING --- */
+        async function fetchMembers() {
+            try {
+                const res = await fetch(`${API_URL}/members`);
+                members = await res.json();
+                renderTable(members);
+            } catch (err) { console.error('Error fetching members:', err); }
+        }
+
+        async function fetchDashboardStats() {
+            const monthSelect = document.getElementById('dashMonth');
+            const yearSelect = document.getElementById('dashYear');
+            if (!monthSelect || !yearSelect) return;
+
+            const month = monthSelect.value;
+            const year = yearSelect.value;
+
+            try {
+                const res = await fetch(`${API_URL}/stats?month=${month}&year=${year}`);
+                const data = await res.json();
+
+                document.getElementById('statNewMembers').textContent = data.newMembers;
+                document.getElementById('statLeftMembers').textContent = data.membersLeft;
+                document.getElementById('statRevenue').textContent = `₹${data.revenue.toLocaleString()}`;
+                document.getElementById('statActive').textContent = data.totalActive;
+                document.getElementById('statExpired').textContent = data.totalExpired;
+            } catch (err) { console.error('Error fetching stats:', err); }
+        }
+
+        /* --- RENDER & FILTER --- */
+        function renderTable(data) {
+            const tbody = document.getElementById('membersTableBody');
+            tbody.innerHTML = '';
+            if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No members found</td></tr>'; return; }
+
+            const today = new Date();
+            today.setHours(0,0,0,0);
+
+            data.forEach(m => {
+                const expDate = new Date(m.expiryDate);
+                expDate.setHours(0,0,0,0);
+                const diffTime = expDate - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                let statusHtml = '';
+                let nameStyle = '';
+                
+                if (diffDays < 0) {
+                    statusHtml = `<span class="status-badge status-expired">Expired</span>`;
+                } else if (diffDays === 0) {
+                    statusHtml = `<span class="status-badge status-critical">Expiring Today!</span>`;
+                    nameStyle = 'color: var(--danger); font-weight: 700;';
+                } else if (diffDays <= 7) {
+                    statusHtml = `<span class="status-badge status-warning">Expiring in ${diffDays} Days</span>`;
+                    nameStyle = 'color: #F59E0B; font-weight: 700;';
+                } else {
+                    statusHtml = `<span class="status-badge status-active">Active</span>`;
+                }
+
+                const displayImg = m.photo ? m.photo : `https://ui-avatars.com/api/?name=${m.name}&background=random`;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <div class="avatar-cell">
+                            <img src="${displayImg}" class="avatar">
+                            <div>
+                                <div style="font-weight:bold; ${nameStyle}">${m.name}</div>
+                                <div style="font-size:0.8rem; color:var(--text-muted)">${m.mobileNumber}</div>
+                                <div style="font-size:0.75rem; color:var(--success)">₹${parseFloat(m.amount).toFixed(2)}</div></div>
+                        </div>
+                    </td>
+                    <td><small style="color:var(--text-muted)">Age: ${m.age} | Wt: ${m.weight}kg</small></td>
+                    <td>${m.duration} Mo</td>
+                    <td>${m.joinedDate}</td>
+                    <td style="${diffDays <= 7 && diffDays >= 0 ? 'color: #F59E0B; font-weight:bold;' : ''}">${m.expiryDate}</td>
+                    <td>${statusHtml}</td>
+                    <td>
+                        <button class="btn btn-sm" onclick="editMember('${m._id}')">Edit</button>
+                        <button class="btn btn-sm" style="background:var(--primary); color:white;" onclick="viewHistory('${m._id}')">History</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteMember('${m._id}')">Del</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+        document.getElementById('statusFilter').addEventListener('change', applyFilters);
+
+        function applyFilters() {
+            const term = document.getElementById('searchInput').value.toLowerCase();
+            const status = document.getElementById('statusFilter').value;
+            const today = new Date();
+
+            const filtered = members.filter(m => {
+                const matchesSearch = m.name.toLowerCase().includes(term);
+                const expDate = new Date(m.expiryDate);
+                const matchesStatus = status === 'all' ? true : (status === 'active' ? expDate >= today : expDate < today);
+                return matchesSearch && matchesStatus;
+            });
+            renderTable(filtered);
+        }
+
+        /* --- CRUD --- */
+        const form = document.getElementById('memberForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('memberId').value;
+
+            if (!id && !currentPhotoBase64) { alert("Please upload a photo!"); return; }
+
+            const payload = {
+                name: document.getElementById('memberName').value,
+                age: Number(document.getElementById('memberAge').value),
+                weight: Number(document.getElementById('memberWeight').value),
+                mobileNumber: document.getElementById('memberMobile').value,
+                address: document.getElementById('memberAddress').value,
+                amount: Number(document.getElementById('memberAmount').value),
+                joinedDate: document.getElementById('memberJoinedDate').value,
+                duration: Number(document.getElementById('memberDuration').value),
+                photo: currentPhotoBase64
+            };
+
+            if (id) {
+                const existingMember = members.find(m => m._id === id);
+                if (!currentPhotoBase64 && existingMember) { payload.photo = existingMember.photo; }
+            }
+            payload.expiryDate = calculateExpiry(payload.joinedDate, payload.duration);
+
+            if (id) {
+                await fetch(`${API_URL}/members/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            } else {
+                await fetch(`${API_URL}/members`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            }
+            closeModal();
+            fetchMembers();
+            fetchDashboardStats();
+        });
+
+        async function deleteMember(id) {
+            if (confirm('Delete member?')) {
+                await fetch(`${API_URL}/members/${id}`, { method: 'DELETE' });
+                fetchMembers();
+                fetchDashboardStats();
+            }
+        }
+
+        async function editMember(id) {
+            const member = members.find(m => m._id === id);
+            if (!member) return;
+
+            document.getElementById('memberId').value = member._id;
+            document.getElementById('memberName').value = member.name;
+            document.getElementById('memberAge').value = member.age;
+            document.getElementById('memberWeight').value = member.weight;
+            document.getElementById('memberMobile').value = member.mobileNumber;
+            document.getElementById('memberAddress').value = member.address;
+            document.getElementById('memberAmount').value = member.amount;
+            document.getElementById('memberJoinedDate').value = member.joinedDate;
+            document.getElementById('memberDuration').value = member.duration;
+
+            if (member.photo) {
+                currentPhotoBase64 = member.photo;
+                previewImg.src = member.photo;
+                previewImg.style.display = 'block';
+                uploadText.textContent = "Change photo";
+            } else {
+                resetImageState();
+            }
+            document.getElementById('modalTitle').innerText = 'Edit Member';
+            openModal();
+        }
+
+        /* --- HISTORY --- */
+        function viewHistory(id) {
+            const member = members.find(m => m._id === id);
+            if (!member) return;
+
+            const list = document.getElementById('historyList');
+            list.innerHTML = '';
+
+            if (!member.history || member.history.length === 0) {
+                list.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">No previous history found.</div>`;
+            } else {
+                member.history.forEach((h, index) => {
+                    const item = document.createElement('div');
+                    item.style.padding = "15px";
+                    item.style.borderBottom = "1px solid var(--border)";
+                    item.style.marginBottom = "10px";
+                    
+                    item.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <span style="font-weight:bold; color:var(--primary);">Past Plan ${index + 1}</span>
+                            <span style="color:var(--success);">$${h.amount}</span>
+                        </div>
+                        <div style="font-size:0.9rem; color:var(--text-muted);">Duration: ${h.duration} Month(s) | Joined: ${h.joinedDate}</div>
+                        <div style="font-size:0.9rem; color:var(--text-muted);">Expired: ${h.expiryDate}</div>
+                    `;
+                    list.appendChild(item);
+                });
+            }
+            document.getElementById('historyModal').classList.add('open');
+        }
+
+        /* --- HELPERS --- */
+        function calculateExpiry(start, months) {
+            const d = new Date(start);
+            d.setMonth(d.getMonth() + months);
+            return d.toISOString().split('T')[0];
+        }
+
+        function switchView(view) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(`view-${view}`).classList.add('active');
+            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            if (view === 'dashboard') fetchDashboardStats();
+        }
+
+        function openModal() { document.getElementById('memberModal').classList.add('open'); }
+        function closeModal() { 
+            document.getElementById('memberModal').classList.remove('open'); 
+            form.reset(); 
+            document.getElementById('memberId').value = ''; 
+            document.getElementById('modalTitle').innerText = 'Add Member'; 
+            resetImageState();
+            document.getElementById('memberJoinedDate').value = new Date().toISOString().split('T')[0];
+        }
+        function closeHistoryModal() { document.getElementById('historyModal').classList.remove('open'); }
+
+        function initDropdowns() {
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const mSelect = document.getElementById('dashMonth');
+            const ySelect = document.getElementById('dashYear');
+            const now = new Date();
+
+            if (!mSelect || !ySelect) return;
+
+            months.forEach((m, i) => {
+                const opt = document.createElement('option');
+                opt.value = i; opt.innerText = m;
+                mSelect.appendChild(opt);
+            });
+            mSelect.value = now.getMonth();
+
+            for (let i = now.getFullYear() - 2; i <= now.getFullYear() + 2; i++) {
+                const opt = document.createElement('option');
+                opt.value = i; opt.innerText = i;
+                ySelect.appendChild(opt);
+            }
+            ySelect.value = now.getFullYear();
+
+            mSelect.addEventListener('change', fetchDashboardStats);
+            ySelect.addEventListener('change', fetchDashboardStats);
+        }
+    </script>
+</body>
+
+</html>
