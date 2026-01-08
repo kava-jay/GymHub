@@ -570,10 +570,48 @@
                 padding: 20px;
             }
         }
+
+        /* --- TOAST NOTIFICATION STYLES --- */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: var(--bg-card);
+            color: var(--text-main);
+            padding: 16px 20px;
+            border-radius: 8px;
+            border-left: 5px solid var(--success);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            transform: translateX(120%);
+            /* Start off-screen */
+            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+
+        .toast.show {
+            transform: translateX(0);
+            /* Slide in */
+        }
+
+        .toast-icon {
+            color: var(--success);
+            font-size: 1.2rem;
+        }
     </style>
 </head>
 
 <body>
+    <div id="toast-container"></div>
 
     <!-- Sidebar -->
     <nav class="sidebar">
@@ -983,12 +1021,16 @@
         }
 
         /* --- CRUD --- */
+        /* --- CRUD --- */
         const form = document.getElementById('memberForm');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = document.getElementById('memberId').value;
 
-            if (!id && !currentPhotoBase64) { alert("Please upload a photo!"); return; }
+            if (!id && !currentPhotoBase64) {
+                alert("Please upload a photo!");
+                return;
+            }
 
             const payload = {
                 name: document.getElementById('memberName').value,
@@ -1008,14 +1050,32 @@
             }
             payload.expiryDate = calculateExpiry(payload.joinedDate, payload.duration);
 
-            if (id) {
-                await fetch(`${API_URL}/members/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            } else {
-                await fetch(`${API_URL}/members`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            try {
+                if (id) {
+                    // UPDATE LOGIC
+                    await fetch(`${API_URL}/members/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    showToast("Member updated successfully!"); // <--- MESSAGE
+                } else {
+                    // CREATE LOGIC
+                    await fetch(`${API_URL}/members`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    showToast("Member added successfully!"); // <--- MESSAGE
+                }
+
+                closeModal();
+                fetchMembers();
+                fetchDashboardStats();
+            } catch (error) {
+                console.error("Error saving member:", error);
+                alert("Error saving member. Please try again.");
             }
-            closeModal();
-            fetchMembers();
-            fetchDashboardStats();
         });
 
         async function deleteMember(id) {
@@ -1088,6 +1148,33 @@
             const d = new Date(start);
             d.setMonth(d.getMonth() + months);
             return d.toISOString().split('T')[0];
+        }
+        /* --- TOAST NOTIFICATION HELPER --- */
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `
+        <div class="toast-icon">✓</div>
+        <div style="font-weight: 600;">${message}</div>
+    `;
+
+            container.appendChild(toast);
+
+            // Trigger animation (needs a small delay for CSS transition to catch the DOM change)
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    toast.remove();
+                }, 400); // Wait for slide-out animation to finish
+            }, 3000);
         }
 
         function switchView(view) {
