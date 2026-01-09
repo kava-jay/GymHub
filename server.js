@@ -179,13 +179,23 @@ app.get('/api/stats', checkAuth, async (req, res) => {
         const startDate = new Date(yearNum, monthNum, 1);
         const endDate = new Date(yearNum, parseInt(monthNum) + 1, 0, 23, 59, 59);
 
+        // FIX: Convert Date objects to Strings ('YYYY-MM-DD') to match the Schema type for joinedDate
+        const startDateStr = startDate.toISOString().split('T')[0];
+        const endDateStr = endDate.toISOString().split('T')[0];
+
+        // New Members logic remains based on createdAt (when they were added to system)
         const newMembers = await Member.countDocuments({ createdAt: { $gte: startDate, $lte: endDate } });
+        
         const membersLeft = await DeletedLog.countDocuments({ dateDeleted: { $gte: startDate, $lte: endDate } });
         
+        // --- REVENUE FIX STARTS HERE ---
+        // We changed 'createdAt' to 'joinedDate' and used string variables (startDateStr/endDateStr)
         const revenueResult = await Member.aggregate([
-            { $match: { createdAt: { $gte: startDate, $lte: endDate } } },
+            { $match: { joinedDate: { $gte: startDateStr, $lte: endDateStr } } },
             { $group: { _id: null, total: { $sum: "$amount" } } }
         ]);
+        // --- REVENUE FIX ENDS HERE ---
+
         const revenue = revenueResult.length > 0 ? revenueResult[0].total : 0;
 
         const todayStr = new Date().toISOString().split('T')[0];
