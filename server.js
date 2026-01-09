@@ -8,7 +8,7 @@ const path = require('path');
 const app = express();
 const PORT = 5000;
 
-// 1. Middleware Order
+// 1. Middleware Order gere
 app.use(cookieParser()); 
 app.use(cors({
     origin: 'https://gym-hub-pi.vercel.app',
